@@ -1,0 +1,56 @@
+main:
+  steps:
+    - create_callback:
+        call: events.create_callback_endpoint
+        args:
+            http_callback_method: "GET"
+        result: callback_details
+    - print_callback_details:
+        call: sys.log
+        args:
+            severity: "INFO"
+            text: ${"Listening for callbacks on " + callback_details.url}
+    - to_task:
+        try:
+            steps:
+                - trigger_job:
+                    call: googleapis.pubsub.v1.projects.topics.publish
+                    args:
+                      topic: projects/erika-dev/topics/mock-trigger-topic
+                      body:
+                        messages:
+                          - data: ${base64.encode(json.encode(callback_details))}
+                - await_callback:
+                    call: events.await_callback
+                    args:
+                        callback: ${callback_details}
+                        timeout: 30.0
+                    result: callback_request
+        retry:
+            predicate: ${log_timeout}
+            max_retries: 5
+            backoff:
+                initial_delay: 1
+                max_delay: 10
+                multiplier: 2
+    - print_callback_result:
+        call: sys.log
+        args:
+            severity: "INFO"
+            text: ${"Received " + json.encode_to_string(callback_request.http_request)}
+log_timeout:
+    params: [e]
+    steps:
+      - when_to_repeat:
+          switch:
+            - condition: ${"TimeoutError" in e.tags}
+              steps:
+                  - log_error_and_retry:
+                      call: sys.log
+                      args:
+                          severity: "WARNING"
+                          text: "Timed out waiting for callback, retrying"
+                  - exit_predicate:
+                      return: true
+      - otherwise:
+          return: false
