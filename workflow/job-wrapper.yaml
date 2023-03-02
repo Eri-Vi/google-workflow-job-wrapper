@@ -9,25 +9,25 @@ main:
         call: sys.log
         args:
             severity: "INFO"
-            text: ${"Listening for callbacks on " + callback_details.url}
+            text: $${"Listening for callbacks on " + callback_details.url}
     - to_task:
         try:
             steps:
                 - trigger_job:
                     call: googleapis.pubsub.v1.projects.topics.publish
                     args:
-                      topic: projects/erika-dev/topics/mock-trigger-topic
+                      topic: ${topic_id}
                       body:
                         messages:
-                          - data: ${base64.encode(json.encode(callback_details))}
+                          - data: $${base64.encode(json.encode(callback_details))}
                 - await_callback:
                     call: events.await_callback
                     args:
-                        callback: ${callback_details}
+                        callback: $${callback_details}
                         timeout: 30.0
                     result: callback_request
         retry:
-            predicate: ${log_timeout}
+            predicate: $${log_timeout}
             max_retries: 5
             backoff:
                 initial_delay: 1
@@ -37,13 +37,13 @@ main:
         call: sys.log
         args:
             severity: "INFO"
-            text: ${"Received " + json.encode_to_string(callback_request.http_request)}
+            text: $${"Received " + json.encode_to_string(callback_request.http_request)}
 log_timeout:
     params: [e]
     steps:
       - when_to_repeat:
           switch:
-            - condition: ${"TimeoutError" in e.tags}
+            - condition: $${"TimeoutError" in e.tags}
               steps:
                   - log_error_and_retry:
                       call: sys.log
