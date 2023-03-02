@@ -1,6 +1,6 @@
 init:
 	terraform init \
-		-backend-config=bucket=terraform_erika-dev \
+		-backend-config=bucket=terraform_$(PROJECT_ID) \
 		-backend-config=prefix=workflow-job-wrapper
 
 plan:

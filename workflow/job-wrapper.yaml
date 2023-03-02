@@ -27,7 +27,7 @@ main:
                         timeout: 30.0
                     result: callback_request
         retry:
-            predicate: $${log_timeout}
+            predicate: $${job_failure_predicate}
             max_retries: 5
             backoff:
                 initial_delay: 1
@@ -38,7 +38,7 @@ main:
         args:
             severity: "INFO"
             text: $${"Received " + json.encode_to_string(callback_request.http_request)}
-log_timeout:
+job_failure_predicate:
     params: [e]
     steps:
       - when_to_repeat:
