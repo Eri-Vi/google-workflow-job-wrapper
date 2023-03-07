@@ -33,9 +33,9 @@ main:
                         text: $${"Received " + json.encode_to_string(callback_request.http_request)}
                 - process_callback_result:
                     switch:
-                        - condition: $${callback_request.http_request.code == 500}
+                        - condition: $${callback_request.http_request.body.code == 500}
                           raise:
-                            code: 500
+                            tags: ["RetryError"]
                             message: "Dataflow error: retry the job"
         retry:
             predicate: $${job_failure_predicate}
@@ -58,7 +58,7 @@ job_failure_predicate:
                           text: "Timed out waiting for callback, retrying"
                   - exit_predicate_1:
                       return: true
-            - condition: $${e.code == 500}
+            - condition: $${"RetryError" in e.tags}
               steps:
                   - log_error_2_and_retry:
                       call: sys.log

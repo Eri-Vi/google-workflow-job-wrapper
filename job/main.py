@@ -35,7 +35,7 @@ def process_message(event, context):
       print('Job status: retry')
       data = {'message': 'retry', 'code': 500}
 
-    response = requests.post(url, headers=headers, data=data)
+    response = requests.post(url, headers=headers, data=json.dumps(data))
 
     # Log the response
     print(f"POST request to {url} returned {response.status_code}: {response.text}")
