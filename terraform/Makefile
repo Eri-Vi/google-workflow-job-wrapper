@@ -8,3 +8,9 @@ plan:
 
 apply:
 	terraform apply -var "project=$(PROJECT_ID)"
+
+docs:
+	terraform-docs -c .tfdocs-config.yaml .
+
+format:
+	terraform fmt -recursive

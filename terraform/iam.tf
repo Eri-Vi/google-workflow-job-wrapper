@@ -1,15 +1,18 @@
+# Provision the Service Account with permission to invoke a Workflow (includes permission to POST to the 'callback' URL)
 resource "google_project_iam_member" "iam_workflows_invoker" {
   project = var.project
   role    = "roles/workflows.invoker"
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 
+# Provision the Service Account with permission to invoke a Cloud Function (the 'Job')
 resource "google_project_iam_member" "iam_cloudfunctions_invoker" {
   project = var.project
   role    = "roles/cloudfunctions.invoker"
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 
+# Provision the Service Account with permission to write logs
 resource "google_project_iam_member" "iam_logging_logwriter" {
   project = var.project
   role    = "roles/logging.logWriter"

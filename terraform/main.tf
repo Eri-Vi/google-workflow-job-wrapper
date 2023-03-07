@@ -1,9 +1,11 @@
+# Create a zip file containing the 'Job' source code
 data "archive_file" "job_code" {
   type        = "zip"
   source_dir  = "${path.module}/../job"
   output_path = ".build_artifacts/job.zip"
 }
 
+# Create a GCS bucket for code artifacts
 resource "google_storage_bucket" "code_artifacts" {
   name          = "code-artifacts_${var.project}"
   location      = "australia-southeast1"
@@ -12,13 +14,14 @@ resource "google_storage_bucket" "code_artifacts" {
   uniform_bucket_level_access = true
 }
 
+# Store the zip file containing the 'Job' source code in the code artifact bucket
 resource "google_storage_bucket_object" "job_code" {
   name   = "job_code_${data.archive_file.job_code.output_sha}.zip"
   source = data.archive_file.job_code.output_path
   bucket = google_storage_bucket.code_artifacts.id
 }
 
-# Create a Pub/Sub topic to trigger the 'Job
+# Create a Pub/Sub topic to trigger the 'Job'
 resource "google_pubsub_topic" "mock_job_topic" {
   name = "mock-job-topic"
 }
@@ -43,6 +46,7 @@ resource "google_cloudfunctions_function" "mock_job_service" {
   source_archive_bucket = google_storage_bucket.code_artifacts.name
   source_archive_object = google_storage_bucket_object.job_code.name
 
+  # Set the default Service Account
   service_account_email = google_service_account.service_account.email
 
   # Configure the function to be triggered by the Pub/Sub topic
@@ -62,5 +66,5 @@ resource "google_workflows_workflow" "example_workflow" {
   name            = "job-wrapper"
   region          = "australia-southeast1"
   service_account = google_service_account.service_account.email
-  source_contents = templatefile("../workflow/job-wrapper.yaml", {topic_id = google_pubsub_topic.mock_job_topic.id})
+  source_contents = templatefile("../workflow/job-wrapper.yaml", { topic_id = google_pubsub_topic.mock_job_topic.id })
 }
