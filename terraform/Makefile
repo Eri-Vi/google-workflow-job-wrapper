@@ -5,3 +5,6 @@ init:
 
 plan:
 	terraform plan -var "project=$(PROJECT_ID)"
+
+apply:
+	terraform apply -var "project=$(PROJECT_ID)"

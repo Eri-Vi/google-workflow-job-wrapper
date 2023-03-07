@@ -1,7 +1,7 @@
 data "archive_file" "job_code" {
   type        = "zip"
   source_dir  = "${path.module}/../job"
-  output_path = "job.zip"
+  output_path = ".build_artifacts/job.zip"
 }
 
 resource "google_storage_bucket" "code_artifacts" {
@@ -18,33 +18,61 @@ resource "google_storage_bucket_object" "job_code" {
   bucket = google_storage_bucket.code_artifacts.id
 }
 
-# Create a Pub/Sub topic
+# Create a Pub/Sub topic to trigger the 'Job
 resource "google_pubsub_topic" "mock_job_topic" {
   name = "mock-job-topic"
 }
 
-# Create a Cloud Function
+# Create a Service Account to run the 'Job' and the 'Wrapper'
+resource "google_service_account" "service_account" {
+  account_id   = "job-wrapper"
+  display_name = "Job Wrapper Service Account"
+}
+
+resource "google_project_iam_member" "iam_workflows_invoker" {
+  project = var.project
+  role    = "roles/workflows.invoker"
+  member  = "serviceAccount:${google_service_account.service_account.email}"
+}
+
+resource "google_project_iam_member" "iam_cloudfunctions_invoker" {
+  project = var.project
+  role    = "roles/cloudfunctions.invoker"
+  member  = "serviceAccount:${google_service_account.service_account.email}"
+}
+
+# Create a Cloud Function 'Job'
 resource "google_cloudfunctions_function" "mock_job_service" {
-  name        = "mock-job-service"
-  runtime     = "python311"
+  name          = "mock-job-service"
+  runtime       = "python311"
+  max_instances = 1
+  min_instances = 0
 
   # Set the entry point for the function
-  entry_point = "process_event"
+  entry_point = "process_message"
 
   # Define the function's source code
   source_archive_bucket = google_storage_bucket.code_artifacts.name
   source_archive_object = google_storage_bucket_object.job_code.name
+
+  service_account_email = google_service_account.service_account.email
 
   # Configure the function to be triggered by the Pub/Sub topic
   event_trigger {
     event_type = "google.pubsub.topic.publish"
     resource   = google_pubsub_topic.mock_job_topic.id
   }
+
+  timeouts {
+    create = "10m"
+    update = "10m"
+  }
 }
 
-# Create a Cloud Workflow
+# Create a Cloud Workflow 'Wrapper'
 resource "google_workflows_workflow" "example_workflow" {
-  name        = "job-wrapper"
-  region      = "australia-southeast1"
+  name            = "job-wrapper"
+  region          = "australia-southeast1"
+  service_account = google_service_account.service_account.email
   source_contents = templatefile("../workflow/job-wrapper.yaml", {topic_id = google_pubsub_topic.mock_job_topic.id})
 }

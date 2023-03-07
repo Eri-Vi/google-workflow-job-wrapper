@@ -3,7 +3,7 @@ main:
     - create_callback:
         call: events.create_callback_endpoint
         args:
-            http_callback_method: "GET"
+            http_callback_method: "POST"
         result: callback_details
     - print_callback_details:
         call: sys.log
@@ -26,6 +26,17 @@ main:
                         callback: $${callback_details}
                         timeout: 30.0
                     result: callback_request
+                - print_callback_result:
+                    call: sys.log
+                    args:
+                        severity: "INFO"
+                        text: $${"Received " + json.encode_to_string(callback_request.http_request)}
+                - process_callback_result:
+                    switch:
+                        - condition: $${callback_request.http_request.code == 500}
+                          raise:
+                            code: 500
+                            message: "Dataflow error: retry the job"
         retry:
             predicate: $${job_failure_predicate}
             max_retries: 5
@@ -33,11 +44,6 @@ main:
                 initial_delay: 1
                 max_delay: 10
                 multiplier: 2
-    - print_callback_result:
-        call: sys.log
-        args:
-            severity: "INFO"
-            text: $${"Received " + json.encode_to_string(callback_request.http_request)}
 job_failure_predicate:
     params: [e]
     steps:
@@ -45,12 +51,21 @@ job_failure_predicate:
           switch:
             - condition: $${"TimeoutError" in e.tags}
               steps:
-                  - log_error_and_retry:
+                  - log_error_1_and_retry:
                       call: sys.log
                       args:
                           severity: "WARNING"
                           text: "Timed out waiting for callback, retrying"
-                  - exit_predicate:
+                  - exit_predicate_1:
+                      return: true
+            - condition: $${e.code == 500}
+              steps:
+                  - log_error_2_and_retry:
+                      call: sys.log
+                      args:
+                          severity: "WARNING"
+                          text: "Retriable job error, retrying"
+                  - exit_predicate_2:
                       return: true
       - otherwise:
           return: false
