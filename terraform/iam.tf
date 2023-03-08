@@ -5,10 +5,10 @@ resource "google_project_iam_member" "iam_workflows_invoker" {
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 
-# Provision the Service Account with permission to invoke a Cloud Function (the 'Job')
-resource "google_project_iam_member" "iam_cloudfunctions_invoker" {
+# Provision the Service Account with permission to publish to Pub/Sub (the 'Job')
+resource "google_project_iam_member" "iam_pubsub_publisher" {
   project = var.project
-  role    = "roles/cloudfunctions.invoker"
+  role    = "roles/pubsub.publisher"
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 

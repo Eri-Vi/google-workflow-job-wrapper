@@ -10,7 +10,7 @@ main:
         args:
             severity: "INFO"
             text: $${"Listening for callbacks on " + callback_details.url}
-    - to_task:
+    - do_task:
         try:
             steps:
                 - trigger_job:
