@@ -1,5 +1,11 @@
 main:
+  params: [args]
   steps:
+    - print_args:
+        call: sys.log
+        args:
+            severity: "INFO"
+            text: $${"Received request " + json.encode_to_string(args)}
     - create_callback:
         call: events.create_callback_endpoint
         args:
@@ -10,6 +16,11 @@ main:
         args:
             severity: "INFO"
             text: $${"Listening for callbacks on " + callback_details.url}
+    - create_payload:
+        assign:
+            - payload:
+                url: $${callback_details.url}
+                status: $${args.status}
     - do_task:
         try:
             steps:
@@ -19,7 +30,7 @@ main:
                       topic: ${topic_id}
                       body:
                         messages:
-                          - data: $${base64.encode(json.encode(callback_details))}
+                          - data: $${base64.encode(json.encode(payload))}
                 - await_callback:
                     call: events.await_callback
                     args:
@@ -33,7 +44,7 @@ main:
                         text: $${"Received " + json.encode_to_string(callback_request.http_request)}
                 - process_callback_result:
                     switch:
-                        - condition: $${callback_request.http_request.body.code == 500}
+                        - condition: $${callback_request.http_request.body.status == "retry"}
                           raise:
                             tags: ["RetryError"]
                             message: "Dataflow error: retry the job"

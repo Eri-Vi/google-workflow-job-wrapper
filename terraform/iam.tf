@@ -5,7 +5,7 @@ resource "google_project_iam_member" "iam_workflows_invoker" {
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 
-# Provision the Service Account with permission to publish to Pub/Sub (the 'Job')
+# Provision the Service Account with permission to publish to Pub/Sub (i.e. trigger the 'Job')
 resource "google_project_iam_member" "iam_pubsub_publisher" {
   project = var.project
   role    = "roles/pubsub.publisher"
